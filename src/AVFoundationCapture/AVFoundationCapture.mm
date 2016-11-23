@@ -232,7 +232,7 @@ AVFoundationCapture::AVFoundationCapture( const std::string& sName, boost::share
     , m_imageBuffer(NULL)
     , m_autoGPUUpload(false)
 {
-    
+
     m_cameraUUID = subgraph->m_DataflowAttributes.getAttributeString( "cameraUUID" );
 	subgraph->m_DataflowAttributes.getAttributeData( "width", m_width );
 	subgraph->m_DataflowAttributes.getAttributeData( "height", m_height );
@@ -372,7 +372,7 @@ void AVFoundationCapture::initializeCamera() {
 AVCaptureDevice * AVFoundationCapture::defaultCamDevice()
 {
     LOG4CPP_INFO(logger, "Requesting default device ");
-    AVCaptureDevice * cam = [AVCaptureDevice defaultInputDeviceWithMediaType: AVMediaTypeVideo];
+    AVCaptureDevice * cam = [AVCaptureDevice defaultDeviceWithMediaType: AVMediaTypeVideo];
     return cam;
 }
 
@@ -384,7 +384,7 @@ AVCaptureDevice * AVFoundationCapture::camDevice(const char* uid)
     LOG4CPP_INFO(logger, "Requesting uid " << uid);
 
     // then find the rest
-    NSArray* devices = [AVCaptureDevice inputDevicesWithMediaType: AVMediaTypeVideo];
+    NSArray* devices = [AVCaptureDevice devicesWithMediaType: AVMediaTypeVideo];
     NSEnumerator *enumerator = [devices objectEnumerator];
 
     AVCaptureDevice* value;
@@ -441,7 +441,6 @@ void AVFoundationCapture::destroySession ()
 
     if (mCaptureDevice) {
         LOG4CPP_INFO( logger, "Closing camera " << [[mCaptureDevice localizedName] UTF8String]);
-        if ([mCaptureDevice isOpen]) [mCaptureDevice close];
         [mCaptureDevice release];
         mCaptureDevice = nil;
     }

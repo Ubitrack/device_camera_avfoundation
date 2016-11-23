@@ -41,7 +41,7 @@
 		</Output>
 
 		<DataflowConfiguration>
-			<UbitrackLib class="device_camera_avfoudation" />
+			<UbitrackLib class="device_camera_avfoundation" />
 			<Attribute name="timeOffset" default="0" xsi:type="IntAttributeDeclarationType" displayName="time offset">
 				<Description>
 					<h:p>Offset in ms to add to the timestamps created by the component. This is used
@@ -124,7 +124,7 @@
 		</Output>
 
 		<DataflowConfiguration>
-			<UbitrackLib class="device_camera_avfoudation" />
+			<UbitrackLib class="device_camera_avfoundation" />
 			<Attribute name="timeOffset" default="0" xsi:type="IntAttributeDeclarationType" displayName="time offset">
 				<Description>
 					<h:p>Offset in ms to add to the timestamps created by the component. This is used
