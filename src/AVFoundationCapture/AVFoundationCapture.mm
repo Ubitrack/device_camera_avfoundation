@@ -253,10 +253,18 @@ AVFoundationCapture::AVFoundationCapture( const std::string& sName, boost::share
         }
     }
 
-	std::string intrinsicFile = subgraph->m_DataflowAttributes.getAttributeString( "intrinsicMatrixFile" );
-	std::string distortionFile = subgraph->m_DataflowAttributes.getAttributeString( "distortionFile" );
 
-	m_undistorter.reset(new Vision::Undistortion(intrinsicFile, distortionFile));
+    if (subgraph->m_DataflowAttributes.hasAttribute("cameraModelFile")){
+        std::string cameraModelFile = subgraph->m_DataflowAttributes.getAttributeString("cameraModelFile");
+        m_undistorter.reset(new Vision::Undistortion(cameraModelFile));
+    }
+    else {
+        std::string intrinsicFile = subgraph->m_DataflowAttributes.getAttributeString("intrinsicMatrixFile");
+        std::string distortionFile = subgraph->m_DataflowAttributes.getAttributeString("distortionFile");
+
+
+        m_undistorter.reset(new Vision::Undistortion(intrinsicFile, distortionFile));
+    }
 }
 
 AVFoundationCapture::~AVFoundationCapture()

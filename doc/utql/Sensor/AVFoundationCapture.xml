@@ -97,7 +97,94 @@
 		</DataflowConfiguration>
 	</Pattern>
 
-	
+
+	<Pattern name="AVFoundationCaptureWithCameraModel" displayName="AVFoundation Framegrabber with Camera Model">
+		<Description>
+			<h:p>
+				This component grabs images from a AVFoundation device and pushes them.
+			</h:p>
+		</Description>
+		<Output>
+			<Node name="Camera" displayName="Camera" />
+			<Node name="ImagePlane" displayName="Image Plane" />
+
+			<Edge name="Intrinsics" source="Camera"	destination="ImagePlane" displayName="Camera Intrinsics">
+				<Description>
+					<h:p>The intrinsic camera matrix.</h:p>
+				</Description>
+				<Attribute name="type" value="3x3Matrix" xsi:type="EnumAttributeReferenceType"/>
+				<Attribute name="mode" value="pull" xsi:type="EnumAttributeReferenceType"/>
+			</Edge>
+
+			<Edge name="Output" source="Camera" destination="ImagePlane" displayName="Greyscale Image">
+				<Description>
+					<h:p>The camera image (greyscale).</h:p>
+				</Description>
+				<Attribute name="type" value="Image" xsi:type="EnumAttributeReferenceType"/>
+				<Attribute name="mode" value="push" xsi:type="EnumAttributeReferenceType"/>
+			</Edge>
+			<Edge name="ColorOutput" source="Camera" destination="ImagePlane" displayName="Color Image">
+				<Description>
+					<h:p>The camera image (color).</h:p>
+				</Description>
+				<Attribute name="type" value="Image" xsi:type="EnumAttributeReferenceType"/>
+				<Attribute name="mode" value="push" xsi:type="EnumAttributeReferenceType"/>
+			</Edge>
+		</Output>
+
+		<DataflowConfiguration>
+			<UbitrackLib class="device_camera_avfoundation" />
+			<Attribute name="timeOffset" default="0" xsi:type="IntAttributeDeclarationType" displayName="time offset">
+				<Description>
+					<h:p>Offset in ms to add to the timestamps created by the component. This is used
+						to compensate clock shift.</h:p>
+				</Description>
+			</Attribute>
+
+			<Attribute name="cameraUUID" default="" xsi:type="StringAttributeDeclarationType" displayName="camera uuid">
+				<Description>
+					<h:p>The camera UUID.</h:p>
+				</Description>
+			</Attribute>
+
+			<Attribute name="width" default="0" xsi:type="IntAttributeDeclarationType" displayName="image width">
+				<Description>
+					<h:p>The image with.</h:p>
+				</Description>
+			</Attribute>
+
+			<Attribute name="height" default="0" xsi:type="IntAttributeDeclarationType" displayName="image height">
+				<Description>
+					<h:p>The image height.</h:p>
+				</Description>
+			</Attribute>
+
+			<Attribute name="disableAutostart" default="false" xsi:type="StringAttributeDeclarationType" displayName="disable autostart">
+				<Description>
+					<h:p>Disable Autostart.</h:p>
+				</Description>
+			</Attribute>
+
+			<Attribute name="cameraModelFile" default="cameraModelFile.calib" displayName="Intrinsic and distprtion model file" xsi:type="PathAttributeDeclarationType">
+				<Description>
+					<h:p>Optional file where the camera intrinsic matrix and distortion vectors will be read from. This is necessary to
+						undistort the image. The matrix is also provided to other components via the
+						<h:code>Intrinsics</h:code> port</h:p>
+				</Description>
+			</Attribute>
+
+			<Attribute name="uploadImageOnGPU" displayName="Automatic Upload on GPU" default="false" xsi:type="EnumAttributeDeclarationType">
+				<Description>
+					<h:p>
+						Each grabbed Image is automatically uploaded to the GPU for further processing. Attention: Uploading and downloading images from the GPU is time consuming.
+					</h:p>
+				</Description>
+				<EnumValue name="false" displayName="False"/>
+				<EnumValue name="true"  displayName="True"/>
+			</Attribute>
+		</DataflowConfiguration>
+	</Pattern>
+
 	<Pattern name="AVFoundationCaptureUncalibrated" displayName="AVFoundationCapture (Uncalibrated)">
 		<Description>
 			<h:p>
