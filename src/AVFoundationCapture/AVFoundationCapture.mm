@@ -299,7 +299,6 @@ void AVFoundationCapture::initializeCamera() {
 
         if ([[device uniqueID] rangeOfString:uid].location != NSNotFound) {
             uid = [device uniqueID];
-            break;
         }
     }
 
