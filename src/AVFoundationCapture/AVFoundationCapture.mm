@@ -160,15 +160,12 @@ protected:
     AVCaptureSession            *mCaptureSession;
     AVCaptureDeviceInput        *mCaptureDeviceInput;
     AVCaptureVideoDataOutput    *mCaptureDecompressedVideoOutput;
-    AVCaptureDevice             *mCaptureDevice;
     UTCaptureDelegate           *m_CaptureDelegate;
 
     unsigned char* m_imageBuffer;
     size_t         m_imageBufferSize;
 
     void initializeCamera();
-    AVCaptureDevice* defaultCamDevice();
-    AVCaptureDevice* camDevice(const char* uid);
     void configureOutput ();
     void destroySession();
 
@@ -227,7 +224,6 @@ AVFoundationCapture::AVFoundationCapture( const std::string& sName, boost::share
     , mCaptureSession(NULL)
     , mCaptureDeviceInput(NULL)
     , mCaptureDecompressedVideoOutput(NULL)
-    , mCaptureDevice(NULL)
     , m_CaptureDelegate(NULL)
     , m_imageBuffer(NULL)
     , m_autoGPUUpload(false)
@@ -269,7 +265,6 @@ AVFoundationCapture::AVFoundationCapture( const std::string& sName, boost::share
 
 AVFoundationCapture::~AVFoundationCapture()
 {
-    destroySession();
 }
 
 void AVFoundationCapture::initializeCamera() {
@@ -285,17 +280,10 @@ void AVFoundationCapture::initializeCamera() {
     m_CaptureDelegate = [[UTCaptureDelegate alloc] init];
     [m_CaptureDelegate registerOwner:this];
 
-    // need uid - somethimes parts of uuid change, need to strmatch the uuid
-//    const char* uid = NULL;
-//    if (m_cameraUUID != "") {
-//        uid = m_cameraUUID.c_str();
-//    }
-
     NSArray* devices = [AVCaptureDevice devicesWithMediaType:AVMediaTypeVideo];
 
     if ([devices count] == 0) {
         LOG4CPP_ERROR( logger, "AVFoundation didn't find any attached Video Input Devices!" );
-        [devices release];
         return;
     }
 
@@ -315,15 +303,31 @@ void AVFoundationCapture::initializeCamera() {
         }
     }
 
-    [devices release];
-    [device release];
+    if (! uid) {
+        LOG4CPP_INFO(logger, "Requesting default device ");
+        device = [[AVCaptureDevice defaultDeviceWithMediaType: AVMediaTypeVideo] retain];
+    } else {
+        LOG4CPP_INFO(logger, "Requesting uid " << [uid UTF8String]);
+        AVCaptureDevice *device_tmp = NULL;
+        for (int i = 0; i < nCameras; ++i) {
+            device_tmp = [devices objectAtIndex:i];
+            const char * cuid = [[ device_tmp uniqueID ] UTF8String ];
+            if (cuid && ( strcmp( [uid UTF8String], cuid ) == 0)) {
+                device = device_tmp;
+                break;
+            }}
 
-    mCaptureDevice = camDevice([uid UTF8String]);
-    if (! mCaptureDevice ) {
+        if (!device) {
+            LOG4CPP_ERROR( logger, "AVFoundation didn't find Video Input Device!" );
+            return;
+        }
+    }
+
+    if (! device ) {
         LOG4CPP_WARN(logger, "Invalid Camera Handle for AVFoundation");
         return;
     }
-    [mCaptureDevice retain];
+
 
     LOG4CPP_INFO(logger, "Selected camera: "
             << ([[device localizedName] UTF8String])
@@ -333,33 +337,16 @@ void AVFoundationCapture::initializeCamera() {
     int success;
     NSError* error;
 
-    if (mCaptureDevice) {
+    if (device) {
         LOG4CPP_INFO(logger, "AVFoundation - Found device.");
 
-        // success = [mCaptureDevice open: &error];
-        // if (!success) {
-        //     LOG4CPP_ERROR(logger, "AVFoundation failed to open a Video Capture Device");
-        //     // destroySession();
-        //     return;
-        // }
-
-        mCaptureDeviceInput = [[AVCaptureDeviceInput alloc] initWithDevice:mCaptureDevice error:&error];
+        mCaptureDeviceInput = [[AVCaptureDeviceInput alloc] initWithDevice:device error:&error];
         if (! mCaptureDeviceInput ) {
             LOG4CPP_ERROR(logger, "AVFoundation input not received");
-            // destroySession();
             return;
         }
-        [mCaptureDeviceInput retain];
 
         mCaptureSession = [[AVCaptureSession alloc] init];
-
-
-        // success = [mCaptureSession addInput: mCaptureDeviceInput error: &error];
-        // if (!success) {
-        //     LOG4CPP_ERROR(logger, "AVFoundation failed to start capture session with opened Capture Device");
-        //     // destroySession();
-        //     return;
-        // }
 
         mCaptureDecompressedVideoOutput = [[AVCaptureVideoDataOutput alloc] init];
 
@@ -369,41 +356,15 @@ void AVFoundationCapture::initializeCamera() {
 
         configureOutput();
 
-        // [mCaptureDecompressedVideoOutput setDelegate: m_CaptureDelegate];
         [mCaptureSession addInput:mCaptureDeviceInput];
         [mCaptureSession addOutput:mCaptureDecompressedVideoOutput];
         
         LOG4CPP_INFO(logger, "AVFoundation - device setup complete.");
 
-    }}
-
-AVCaptureDevice * AVFoundationCapture::defaultCamDevice()
-{
-    LOG4CPP_INFO(logger, "Requesting default device ");
-    AVCaptureDevice * cam = [AVCaptureDevice defaultDeviceWithMediaType: AVMediaTypeVideo];
-    return cam;
-}
-
-AVCaptureDevice * AVFoundationCapture::camDevice(const char* uid)
-{
-    if (! uid) {
-        return defaultCamDevice();
     }
-    LOG4CPP_INFO(logger, "Requesting uid " << uid);
-
-    // then find the rest
-    NSArray* devices = [AVCaptureDevice devicesWithMediaType: AVMediaTypeVideo];
-    NSEnumerator *enumerator = [devices objectEnumerator];
-
-    AVCaptureDevice* value;
-    while (value = ((AVCaptureDevice*) [enumerator nextObject])) {	// while not nil
-        const char * cuid = [[ value uniqueID ] UTF8String ];
-        if (cuid && ( strcmp( uid, cuid ) == 0)) {
-            return value;
-        }}
-    LOG4CPP_ERROR( logger, "AVFoundation didn't find Video Input Device!" );
-    return NULL;
 }
+
+
 
 void AVFoundationCapture::configureOutput ()
 {
@@ -412,7 +373,6 @@ void AVFoundationCapture::configureOutput ()
     if (m_width > 0 && m_height > 0) {
         pixelBufferOptions = [NSDictionary dictionaryWithObjectsAndKeys: [NSNumber numberWithDouble: 1.0 * m_width], (id) kCVPixelBufferWidthKey,
         [NSNumber numberWithDouble: 1.0 * m_height], (id) kCVPixelBufferHeightKey,
-        //[NSNumber numberWithUnsignedInt:k32BGRAPixelFormat], (id)kCVPixelBufferPixelFormatTypeKey,
         [NSNumber numberWithUnsignedInt: kCVPixelFormatType_32BGRA], (id) kCVPixelBufferPixelFormatTypeKey, nil];
     } else {
         pixelBufferOptions = [NSDictionary dictionaryWithObjectsAndKeys: [NSNumber numberWithUnsignedInt: kCVPixelFormatType_32BGRA], (id) kCVPixelBufferPixelFormatTypeKey, nil];
@@ -442,15 +402,10 @@ void AVFoundationCapture::destroySession ()
         mCaptureDecompressedVideoOutput = nil;
     }
     if (m_CaptureDelegate) {
+        [m_CaptureDelegate registerOwner:nil];
         [m_CaptureDelegate
         release];
         m_CaptureDelegate = nil;
-    }
-
-    if (mCaptureDevice) {
-        LOG4CPP_INFO( logger, "Closing camera " << [[mCaptureDevice localizedName] UTF8String]);
-        [mCaptureDevice release];
-        mCaptureDevice = nil;
     }
 }
 
@@ -544,7 +499,6 @@ void AVFoundationCapture::ThreadProc() {
     if (mCaptureSession) {
         if (! [mCaptureSession isRunning]) {
             LOG4CPP_INFO(logger, "Start AVFoundation Capturing.");
-            configureOutput();
             [ mCaptureSession startRunning ];
         }
     } else {
@@ -568,7 +522,7 @@ void AVFoundationCapture::ThreadProc() {
     }
 
     LOG4CPP_INFO(logger, "Stop AVFoundation Capturing.");
-    [mCaptureSession stopRunning];
+    destroySession();
 
 }
 
