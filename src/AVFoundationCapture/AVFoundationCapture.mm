@@ -140,6 +140,9 @@ public:
     /** starts the camera */
     void start();
 
+    /** actually start capturing **/
+    void startCapturing();
+
     /** stops the camera */
     void stop();
     
@@ -246,6 +249,7 @@ AVFoundationCapture::AVFoundationCapture( const std::string& sName, boost::share
         if (subgraph->m_DataflowAttributes.hasAttribute("uploadImageOnGPU")){
             m_autoGPUUpload = subgraph->m_DataflowAttributes.getAttributeString("uploadImageOnGPU") == "true";
             LOG4CPP_INFO(logger, "Upload to GPU enabled? " << m_autoGPUUpload);
+            oclManager.activate();
         }
     }
 
@@ -408,38 +412,43 @@ void AVFoundationCapture::destroySession ()
     }
 }
 
+
+void AVFoundationCapture::startCapturing() {
+
+    LOG4CPP_DEBUG(logger, "Start Capturing.");
+    // run the main-loop until the capture thread is ready
+    // then he'll maintain the loop until stop is requested
+    double sleepTime = 0.005;
+
+    m_Thread.reset( new boost::thread( boost::bind( &AVFoundationCapture::ThreadProc, this ) ) );
+
+    // If the capture is launched in a separate thread, then
+    // [NSRunLoop currentRunLoop] is not the same as in the main thread, and has no timer.
+    //see https://developer.apple.com/library/mac/#documentation/Cocoa/Reference/Foundation/Classes/nsrunloop_Class/Reference/Reference.html
+    // "If no input sources or timers are attached to the run loop, this
+    // method exits immediately"
+    // using usleep() is not a good alternative, because it may block the GUI.
+    // Create a dummy timer so that runUntilDate does not exit immediately:
+    [NSTimer scheduledTimerWithTimeInterval:100 target:nil selector:@selector(doFireTimer:) userInfo:nil repeats:YES];
+    while (!m_bCaptureThreadReady) {
+        [[NSRunLoop currentRunLoop] runUntilDate:[NSDate dateWithTimeIntervalSinceNow:sleepTime]];
+    }
+
+}
+
+
 void AVFoundationCapture::start()
 {
     if ( !m_running ) {
-
-        // run the main-loop until the capture thread is ready
-        // then he'll maintain the loop until stop is requested
-        double sleepTime = 0.005;
-
-        // @todo Check if this really makes sense for cases where no Rendering is done in ubitrack!!!
         if (m_autoGPUUpload){
+            // wait for the notification of OpenCL Manager to start capturing
             LOG4CPP_DEBUG(logger, "AVFoundation - Waiting for OpenCLManager to be initialized.");
             Vision::OpenCLManager& oclManager = Vision::OpenCLManager::singleton();
-            while (!oclManager.isInitialized()) {
-                Util::sleep(int(sleepTime*1000));
-            }
-            LOG4CPP_DEBUG(logger, "AVFoundation - OpenCLManager is initialized.");
+            oclManager.registerInitCallback(boost::bind(&AVFoundationCapture::startCapturing, this));
+        } else {
+            // start capturing right away
+            startCapturing();
         }
-
-        m_Thread.reset( new boost::thread( boost::bind( &AVFoundationCapture::ThreadProc, this ) ) );
-
-        // If the capture is launched in a separate thread, then
-        // [NSRunLoop currentRunLoop] is not the same as in the main thread, and has no timer.
-        //see https://developer.apple.com/library/mac/#documentation/Cocoa/Reference/Foundation/Classes/nsrunloop_Class/Reference/Reference.html
-        // "If no input sources or timers are attached to the run loop, this
-        // method exits immediately"
-        // using usleep() is not a good alternative, because it may block the GUI.
-        // Create a dummy timer so that runUntilDate does not exit immediately:
-        [NSTimer scheduledTimerWithTimeInterval:100 target:nil selector:@selector(doFireTimer:) userInfo:nil repeats:YES];
-        while (!m_bCaptureThreadReady) {
-            [[NSRunLoop currentRunLoop] runUntilDate:[NSDate dateWithTimeIntervalSinceNow:sleepTime]];
-        }
-
     }
     Component::start();
 }
@@ -465,7 +474,15 @@ void AVFoundationCapture::receiveFrame(void *pixelBufferBase, size_t width, size
             return;
         }
 
-        boost::shared_ptr<Vision::Image> pColorImage(new Image((int)width, (int)height, 4, static_cast< char* >(pixelBufferBase), IPL_DEPTH_8U, 0));
+        Vision::Image::ImageFormatProperties fmt;
+        fmt.channels = 4;
+        fmt.depth = CV_8U;
+        fmt.imageFormat = Vision::Image::BGRA;
+        fmt.origin = 0;
+        fmt.bitsPerPixel = 32;
+        fmt.matType = CV_8UC4;
+
+        boost::shared_ptr<Vision::Image> pColorImage(new Image((int)width, (int)height, fmt, static_cast< char* >(pixelBufferBase)));
 
 #ifdef ENABLE_EVENT_TRACING
         TRACEPOINT_MEASUREMENT_CREATE(getEventDomain(), timestamp, getName().c_str(), "VideoCapture")
@@ -480,7 +497,7 @@ void AVFoundationCapture::receiveFrame(void *pixelBufferBase, size_t width, size
         }
 
         pColorImage = m_undistorter->undistort( pColorImage );
-        pColorImage->set_pixelFormat(Vision::Image::BGRA);
+//        pColorImage->set_pixelFormat(Vision::Image::BGRA);
 
         if ( m_colorOutPort.isConnected() )
             m_colorOutPort.send( Measurement::ImageMeasurement( timestamp, pColorImage ) );
@@ -490,6 +507,7 @@ void AVFoundationCapture::receiveFrame(void *pixelBufferBase, size_t width, size
 }
 
 void AVFoundationCapture::ThreadProc() {
+
 
     double sleepTime = 0.005;
 
