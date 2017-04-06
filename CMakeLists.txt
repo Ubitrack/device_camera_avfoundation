@@ -1,7 +1,9 @@
 set(the_description "The OSX AVFoundation Capture Component")
 ut_add_component(device_camera_avfoundation DEPS utcore utdataflow utvision )
 
-if(APPLE AND CMAKE_COMPILER_IS_CLANGCXX)
+#if(APPLE AND CMAKE_COMPILER_IS_CLANGCXX)
+if(APPLE)
+	MESSAGE(STATUS "Activate AVFoundationCaputure")
     set(HAVE_AVFOUNDATION YES)
     list(APPEND AVFOUNDATION_LIBRARIES "-framework AVFoundation" "-framework CoreMedia" "-framework QuartzCore" "-framework AppKit")
 
