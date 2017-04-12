@@ -249,6 +249,8 @@ AVFoundationCapture::AVFoundationCapture( const std::string& sName, boost::share
         if (subgraph->m_DataflowAttributes.hasAttribute("uploadImageOnGPU")){
             m_autoGPUUpload = subgraph->m_DataflowAttributes.getAttributeString("uploadImageOnGPU") == "true";
             LOG4CPP_INFO(logger, "Upload to GPU enabled? " << m_autoGPUUpload);
+        }
+        if (m_autoGPUUpload) {
             oclManager.activate();
         }
     }
