@@ -23,7 +23,7 @@
 				<Attribute name="type" value="3x3Matrix" xsi:type="EnumAttributeReferenceType"/>
 				<Attribute name="mode" value="pull" xsi:type="EnumAttributeReferenceType"/>
 			</Edge>
-			
+
 			<Edge name="Output" source="Camera" destination="ImagePlane" displayName="Greyscale Image">
 				<Description>
 					<h:p>The camera image (greyscale).</h:p>
@@ -113,6 +113,14 @@
 					<h:p>The intrinsic camera matrix.</h:p>
 				</Description>
 				<Attribute name="type" value="3x3Matrix" xsi:type="EnumAttributeReferenceType"/>
+				<Attribute name="mode" value="pull" xsi:type="EnumAttributeReferenceType"/>
+			</Edge>
+
+			<Edge name="CameraModel" source="Camera" destination="ImagePlane" displayName="Camera Model">
+				<Description>
+					<h:p>The camera model.</h:p>
+				</Description>
+				<Attribute name="type" value="Intrinsics" xsi:type="EnumAttributeReferenceType"/>
 				<Attribute name="mode" value="pull" xsi:type="EnumAttributeReferenceType"/>
 			</Edge>
 

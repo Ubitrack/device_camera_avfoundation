@@ -156,6 +156,16 @@ public:
 		}
 	}
 
+    /** handler method for incoming pull requests */
+    Measurement::CameraIntrinsics getCameraModel( Measurement::Timestamp t )
+    {
+        if (m_undistorter) {
+            return Measurement::CameraIntrinsics( t, m_undistorter->getIntrinsics() );
+        } else {
+            UBITRACK_THROW( "No undistortion configured for AVFoundationCapture" );
+        }
+    }
+
     void receiveFrame (void*pixelBufferBase, size_t width, size_t height, size_t size, Ubitrack::Measurement::Timestamp timestamp);
 
 protected:
@@ -200,7 +210,6 @@ protected:
     volatile bool m_bStop;
     volatile bool m_bCaptureThreadReady;
 
-
 	/** undistorter */
 	boost::shared_ptr<Vision::Undistortion> m_undistorter;
 
@@ -208,6 +217,7 @@ protected:
 	Dataflow::PushSupplier< Measurement::ImageMeasurement > m_outPort;
 	Dataflow::PushSupplier< Measurement::ImageMeasurement > m_colorOutPort;
 	Dataflow::PullSupplier< Measurement::Matrix3x3 > m_intrinsicsPort;
+    Dataflow::PullSupplier< Measurement::CameraIntrinsics > m_cameraModelPort;
 };
 
 
@@ -223,6 +233,7 @@ AVFoundationCapture::AVFoundationCapture( const std::string& sName, boost::share
 	, m_outPort( "Output", *this )
 	, m_colorOutPort( "ColorOutput", *this )
 	, m_intrinsicsPort( "Intrinsics", *this, boost::bind( &AVFoundationCapture::getIntrinsic, this, _1 ) )
+    , m_cameraModelPort( "CameraModel", *this, boost::bind( &AVFoundationCapture::getCameraModel, this, _1 ) )
     , m_imageBufferSize(0)
     , mCaptureSession(NULL)
     , mCaptureDeviceInput(NULL)
