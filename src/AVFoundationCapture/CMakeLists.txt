@@ -7,7 +7,12 @@ FILE(GLOB UBITRACK_SRCS RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}"
 
 add_library(${UBITRACK_LIBRARY_NAME} SHARED ${UBITRACK_SRCS})
 
-target_link_libraries(${UBITRACK_LIBRARY_NAME} ${CONAN_LIBS} ${UBITRACK_EXTRA_LIBS})
+target_link_libraries(${UBITRACK_LIBRARY_NAME} 
+    CONAN_PKG::ubitrack_core
+    CONAN_PKG::ubitrack_vision
+    CONAN_PKG::ubitrack_dataflow
+    ${UBITRACK_EXTRA_LIBS}
+    )
 
 # Apply Target Properties
 if(MSVC)
@@ -17,34 +22,5 @@ if(MSVC)
   set_target_properties(${UBITRACK_LIBRARY_NAME} PROPERTIES LINK_FLAGS "/NODEFAULTLIB:libc /DEBUG")
 endif()
 
-foreach(_flag ${UBITRACK_COMPILE_FLAGS})
-  set_target_properties(${UBITRACK_LIBRARY_NAME} PROPERTIES COMPILE_FLAGS "${_flag}")
-endforeach()
-foreach(_flag ${UBITRACK_LINK_FLAGS})
-  set_target_properties(${UBITRACK_LIBRARY_NAME} PROPERTIES LINK_FLAGS "${_flag}")
-endforeach()
-foreach(_flag ${UBITRACK_LINK_FLAGS_DEBUG})
-  set_target_properties(${UBITRACK_LIBRARY_NAME} PROPERTIES LINK_FLAGS_DEBUG "${_flag}")
-endforeach()
-foreach(_symb ${UBITRACK_DEFINES})
-  set_target_properties(${UBITRACK_LIBRARY_NAME} PROPERTIES DEFINE_SYMBOL ${_symb})
-endforeach()
-
-# set compiler Definitions
-set_target_properties(${UBITRACK_LIBRARY_NAME} PROPERTIES COMPILE_DEFINITIONS "${UBITRACK_COMPILE_DEFINITIONS}")
-
-# set fPIC
-set_property(TARGET ${UBITRACK_LIBRARY_NAME} PROPERTY POSITION_INDEPENDENT_CODE ON)
-
-set_target_properties(${UBITRACK_LIBRARY_NAME} PROPERTIES
-  OUTPUT_NAME "${UBITRACK_LIBRARY_NAME}${UBITRACK_DLLVERSION}"
-  DEBUG_POSTFIX "${UBITRACK_DEBUG_POSTFIX}"
-  ARCHIVE_OUTPUT_DIRECTORY ${UBITRACK_COMPONENT_INSTALL_PATH}
-  )
-
-# Installation of libraries, headers and documents
-install(TARGETS ${UBITRACK_LIBRARY_NAME}
-  RUNTIME DESTINATION ${UBITRACK_COMPONENT_BIN_INSTALL_PATH}
-  LIBRARY DESTINATION ${UBITRACK_COMPONENT_INSTALL_PATH}
-  ARCHIVE DESTINATION ${UBITRACK_COMPONENT_INSTALL_PATH}
-  )
+ubitrack_set_target_properties(${UBITRACK_LIBRARY_NAME})
+ubitrack_install_component(${UBITRACK_LIBRARY_NAME})
