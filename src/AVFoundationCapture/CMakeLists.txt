@@ -14,6 +14,9 @@ target_link_libraries(${UBITRACK_LIBRARY_NAME}
     ${UBITRACK_EXTRA_LIBS}
     )
 
+# do not create symlinks to versioned names of component libraries
+set_target_properties(${UBITRACK_LIBRARY_NAME} PROPERTIES NO_SONAME ON)
+
 # Apply Target Properties
 if(MSVC)
   if(CMAKE_CROSSCOMPILING)
