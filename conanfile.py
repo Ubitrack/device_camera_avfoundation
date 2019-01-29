@@ -29,10 +29,10 @@ class UbitrackCoreConan(ConanFile):
     # all sources are deployed with the package
     exports_sources = "doc/*", "src/*", "CMakeLists.txt"
 
-    def imports(self):
-        self.copy(pattern="*.dll", dst="bin", src="bin") # From bin to bin
-        self.copy(pattern="*.dylib*", dst="lib", src="lib") 
-        self.copy(pattern="*.so*", dst="lib", src="lib") 
+    # def imports(self):
+    #     self.copy(pattern="*.dll", dst="bin", src="bin") # From bin to bin
+    #     self.copy(pattern="*.dylib*", dst="lib", src="lib") 
+    #     self.copy(pattern="*.so*", dst="lib", src="lib") 
        
     def build(self):
         cmake = CMake(self)
